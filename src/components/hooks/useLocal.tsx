@@ -1,3 +1,4 @@
+"use client";
 import {
   ActionDispatch,
   createContext,
@@ -7,16 +8,15 @@ import {
   useReducer,
 } from "react";
 
-type Note = {
-  id: string;
+export type Note = {
+  name: string;
   slug: string;
-  thumbnail?: string;
-  timestamp?: number;
+  thumbnail: string | null;
+  timestamp: Date;
 };
 
 const STORAGE_KEY = "paperly_notes";
 
-// Utility functions for localStorage operations
 const storageUtils = {
   read: (): Note[] => {
     if (typeof window === "undefined") return [];
@@ -37,60 +37,39 @@ const storageUtils = {
       console.error("Error writing to localStorage:", error);
     }
   },
-
-  add: (note: Note): Note[] => {
-    const notes = storageUtils.read();
-    const updatedNotes = [...notes, note];
-    storageUtils.write(updatedNotes);
-    return updatedNotes;
-  },
-
-  delete: (id: string): Note[] => {
-    const notes = storageUtils.read();
-    const updatedNotes = notes.filter((note) => note.id !== id);
-    storageUtils.write(updatedNotes);
-    return updatedNotes;
-  },
-
-  update: (note: Note): Note[] => {
-    const notes = storageUtils.read();
-    const updatedNotes = notes.map((n) => (n.id === note.id ? note : n));
-    storageUtils.write(updatedNotes);
-    return updatedNotes;
-  },
 };
 
-enum NoteActionKind {
+export enum NoteAction {
   ADD = "add-note",
   DELETE = "delete-note",
   UPDATE = "update-note",
 }
 
-interface NoteAction {
-  type: NoteActionKind;
+interface NoteActionType {
+  type: NoteAction;
   payload: Note;
 }
 
-interface LStorageContext {
-  dispatch: ActionDispatch<[action: NoteAction]>;
+interface LStorageContextType {
+  dispatch: ActionDispatch<[action: NoteActionType]>;
   state: Note[];
 }
-export const LStorageContext = createContext<LStorageContext>(
-  {} as LStorageContext
+export const LStorageContext = createContext<LStorageContextType>(
+  {} as LStorageContextType,
 );
 
 function noteReducer(
-  state: LStorageContext["state"],
-  action: NoteAction
+  state: LStorageContextType["state"],
+  action: NoteActionType,
 ): Note[] {
   const { type, payload } = action;
   switch (type) {
-    case NoteActionKind.ADD:
-      return storageUtils.add(payload);
-    case NoteActionKind.DELETE:
-      return storageUtils.delete(payload.id);
-    case NoteActionKind.UPDATE:
-      return storageUtils.update(payload);
+    case NoteAction.ADD:
+      return [...state, payload];
+    case NoteAction.DELETE:
+      return state.filter((note) => note.slug !== payload.slug);
+    case NoteAction.UPDATE:
+      return state.map((note) => (note.slug === payload.slug ? payload : note));
     default:
       return state;
   }
@@ -98,7 +77,7 @@ function noteReducer(
 
 export function LStorageContextProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(noteReducer, [], () =>
-    storageUtils.read()
+    storageUtils.read(),
   );
 
   useEffect(() => {
