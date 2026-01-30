@@ -1,5 +1,8 @@
-import React from "react";
+"use client";
+import { useNote } from "@/components/hooks/useNote";
+import React, { useEffect, useRef } from "react";
 
-export default function page() {
-  return <div>page</div>;
+export default function Page() {
+  const {} = useNote();
+  return <p>hello</p>;
 }

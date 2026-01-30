@@ -12,7 +12,7 @@ export type Note = {
   name: string;
   slug: string;
   thumbnail: string | null;
-  timestamp: Date;
+  timestamp: number;
 };
 
 const STORAGE_KEY = "paperly_notes";
@@ -50,16 +50,16 @@ interface NoteActionType {
   payload: Note;
 }
 
-interface LStorageContextType {
+interface NoteContextType {
   dispatch: ActionDispatch<[action: NoteActionType]>;
   state: Note[];
 }
-export const LStorageContext = createContext<LStorageContextType>(
-  {} as LStorageContextType,
+export const NoteContext = createContext<NoteContextType>(
+  {} as NoteContextType,
 );
 
 function noteReducer(
-  state: LStorageContextType["state"],
+  state: NoteContextType["state"],
   action: NoteActionType,
 ): Note[] {
   const { type, payload } = action;
@@ -75,7 +75,7 @@ function noteReducer(
   }
 }
 
-export function LStorageContextProvider({ children }: { children: ReactNode }) {
+export function NoteContextProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(noteReducer, [], () =>
     storageUtils.read(),
   );
@@ -85,14 +85,14 @@ export function LStorageContextProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   return (
-    <LStorageContext.Provider value={{ dispatch, state }}>
+    <NoteContext.Provider value={{ dispatch, state }}>
       {children}
-    </LStorageContext.Provider>
+    </NoteContext.Provider>
   );
 }
 
-export default function useLocal() {
-  const context = useContext(LStorageContext);
+export function useNote() {
+  const context = useContext(NoteContext);
   if (!context) throw new Error("Context called outside of the provider!");
   return context;
 }
