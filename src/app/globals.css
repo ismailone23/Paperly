@@ -126,3 +126,15 @@
     @apply bg-background text-foreground;
   }
 }
+[data-radix-slider-track] {
+  background-color: #555;
+}
+
+[data-radix-slider-range] {
+  background-color: #888;
+}
+
+[data-radix-slider-thumb] {
+  background-color: #fff;
+  border: 2px solid #888;
+}
