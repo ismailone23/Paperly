@@ -52,8 +52,8 @@ export default function PensPlates({
 
   return (
     <div className="flex flex-col w-full sticky top-0 z-10">
-      {/* Main Toolbar */}
-      <div className="flex w-full items-center justify-between p-2 backdrop-blur-lg bg-white/60 rounded-lg border border-white/20">
+      {/* Main Toolbar - responsive for mobile */}
+      <div className="flex w-full items-center justify-between p-2 backdrop-blur-lg bg-white/60 rounded-lg border border-white/20 gap-1 flex-wrap md:flex-nowrap">
         <div className="flex items-center gap-1">
           <div className="flex items-center">
             <Tooltip>
@@ -136,20 +136,20 @@ export default function PensPlates({
           </Tooltip>
         </div>
 
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1 md:gap-2 items-center">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="h-8 px-3"
+            className="h-8 px-2 md:px-3"
           >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Previous
+            <ChevronLeft className="w-4 h-4" />
+            <span className="hidden md:inline ml-1">Previous</span>
           </Button>
 
-          <span className="text-sm font-medium px-3 py-1 bg-white rounded border">
-            Page {currentPage} of {pageCount}
+          <span className="text-xs md:text-sm font-medium px-2 md:px-3 py-1 bg-white rounded border whitespace-nowrap">
+            {currentPage}/{pageCount}
           </span>
 
           <Tooltip>
@@ -173,22 +173,22 @@ export default function PensPlates({
             size="sm"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === pageCount}
-            className="h-8 px-3"
+            className="h-8 px-2 md:px-3"
           >
-            Next
-            <ChevronRight className="w-4 h-4 ml-1" />
+            <span className="hidden md:inline mr-1">Next</span>
+            <ChevronRight className="w-4 h-4" />
           </Button>
 
-          <div className="border-l border-gray-300 h-6" />
+          <div className="border-l border-gray-300 h-6 hidden md:block" />
 
           <Button
             variant="outline"
             size="sm"
             onClick={onClearPage}
-            className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            className="h-8 px-2 md:px-3 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
           >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Clear
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden md:inline ml-1">Clear</span>
           </Button>
         </div>
 
