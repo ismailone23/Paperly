@@ -62,18 +62,23 @@ export default function Page() {
       const pageData = getPageData(1); // Use first page as thumbnail
       if (!pageData) return;
 
-      const canvas = document.createElement("canvas");
-      const pixelRatio = window.devicePixelRatio || 1;
-      const CANVAS_WIDTH = 794 * pixelRatio;
-      const CANVAS_HEIGHT = 1123 * pixelRatio;
+      // Use fixed pixel ratio of 2 to match canvas
+      const PIXEL_RATIO = 2;
+      const CANVAS_WIDTH = 794 * PIXEL_RATIO;
+      const CANVAS_HEIGHT = 1123 * PIXEL_RATIO;
       const THUMB_WIDTH = 400;
       const THUMB_HEIGHT = Math.round((1123 / 794) * THUMB_WIDTH);
 
+      const canvas = document.createElement("canvas");
       canvas.width = THUMB_WIDTH;
       canvas.height = THUMB_HEIGHT;
       const ctx = canvas.getContext("2d");
 
       if (ctx) {
+        // Fill with white background first
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, THUMB_WIDTH, THUMB_HEIGHT);
+
         const tempCanvas = document.createElement("canvas");
         tempCanvas.width = CANVAS_WIDTH;
         tempCanvas.height = CANVAS_HEIGHT;

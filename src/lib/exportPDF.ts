@@ -15,11 +15,10 @@ export const exportToPDF = async ({
   const A4_WIDTH_MM = 210;
   const A4_HEIGHT_MM = 297;
 
-  // Canvas dimensions (high resolution)
-  const pixelRatio =
-    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-  const CANVAS_WIDTH = 794 * pixelRatio;
-  const CANVAS_HEIGHT = 1123 * pixelRatio;
+  // Canvas dimensions - use fixed pixel ratio of 2 to match canvas
+  const PIXEL_RATIO = 2;
+  const CANVAS_WIDTH = 794 * PIXEL_RATIO;
+  const CANVAS_HEIGHT = 1123 * PIXEL_RATIO;
 
   // Create PDF with A4 size
   const pdf = new jsPDF({
@@ -40,6 +39,10 @@ export const exportToPDF = async ({
       const tempCtx = tempCanvas.getContext("2d");
 
       if (tempCtx) {
+        // Fill with white background first
+        tempCtx.fillStyle = "#ffffff";
+        tempCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
         tempCtx.putImageData(pageData, 0, 0);
         // Use JPEG with high quality for smaller file size but good quality
         const imageDataUrl = tempCanvas.toDataURL("image/jpeg", 0.95);
