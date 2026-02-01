@@ -73,7 +73,6 @@ const PaperCanvas = forwardRef((props, ref) => {
     const currentState = history[historyStep];
     if (currentState) {
       context.putImageData(currentState, 0, 0);
-      // Save the state to the current page
       savePageData(currentPage, currentState);
     }
   }, [historyStep]);
@@ -91,7 +90,6 @@ const PaperCanvas = forwardRef((props, ref) => {
     if (pageData) {
       context.putImageData(pageData, 0, 0);
     } else {
-      // New blank page
       context.fillStyle = "white";
       context.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
       const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
@@ -104,14 +102,8 @@ const PaperCanvas = forwardRef((props, ref) => {
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > pageCount) return;
-
-    // Save current page before switching
     saveCurrentPageData();
-
-    // Update current page
     setCurrentPage(newPage);
-
-    // Load new page
     loadPage(newPage);
   };
 
@@ -126,22 +118,18 @@ const PaperCanvas = forwardRef((props, ref) => {
     addToHistory(imageData);
   };
 
-  // Handle new page addition
   useEffect(() => {
     if (pageCount > 0 && context) {
-      // Save current page data when page count changes
       saveCurrentPageData();
     }
   }, [pageCount]);
 
-  // Watch for external page changes
   useEffect(() => {
     if (context && slug === initializedSlug) {
       loadPage(currentPage);
     }
   }, [currentPage]);
 
-  // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     currentPage,
     handlePageChange,
@@ -168,18 +156,35 @@ const PaperCanvas = forwardRef((props, ref) => {
     return 20;
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!context) return;
-
-    setIsDrawing(true);
+  // Helper function to get coordinates from mouse or touch event
+  const getCoordinates = (
+    e:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+  ): { x: number; y: number } | null => {
     const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect) return null;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if ("touches" in e) {
+      // Touch event
+      if (e.touches.length > 0) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top,
+        };
+      }
+    } else {
+      // Mouse event
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+    return null;
+  };
 
-    context.beginPath();
-    context.moveTo(x, y);
+  const setupDrawingContext = () => {
+    if (!context) return;
 
     if (activeTool === "eraser") {
       context.globalCompositeOperation = "destination-out";
@@ -201,20 +206,81 @@ const PaperCanvas = forwardRef((props, ref) => {
     }
   };
 
+  // Mouse Events
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!context) return;
+
+    const coords = getCoordinates(e);
+    if (!coords) return;
+
+    setIsDrawing(true);
+    context.beginPath();
+    context.moveTo(coords.x, coords.y);
+    setupDrawingContext();
+  };
+
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !context) return;
 
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const coords = getCoordinates(e);
+    if (!coords) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    context.lineTo(x, y);
+    context.lineTo(coords.x, coords.y);
     context.stroke();
   };
 
   const stopDrawing = () => {
+    if (!isDrawing || !context) return;
+
+    setIsDrawing(false);
+    context.closePath();
+    context.globalAlpha = 1;
+
+    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    savePageData(currentPage, imageData);
+    addToHistory(imageData);
+  };
+
+  // Touch Events
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Prevent scrolling while drawing
+    e.preventDefault();
+
+    if (!context) return;
+
+    const coords = getCoordinates(e);
+    if (!coords) return;
+
+    setIsDrawing(true);
+    context.beginPath();
+    context.moveTo(coords.x, coords.y);
+    setupDrawingContext();
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+
+    if (!isDrawing || !context) return;
+
+    const coords = getCoordinates(e);
+    if (!coords) return;
+
+    // Apple Pencil pressure sensitivity (if available)
+    const touch = e.touches[0];
+    const pressure = (touch as any).force || 1; // force is available on devices with 3D Touch/Apple Pencil
+
+    // Adjust line width based on pressure
+    if (activeTool !== "eraser") {
+      context.lineWidth = getCurrentWidth() * (0.5 + pressure * 0.5);
+    }
+
+    context.lineTo(coords.x, coords.y);
+    context.stroke();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+
     if (!isDrawing || !context) return;
 
     setIsDrawing(false);
@@ -231,13 +297,19 @@ const PaperCanvas = forwardRef((props, ref) => {
       <div className="shadow-2xl bg-white rounded-sm">
         <canvas
           ref={canvasRef}
+          // Mouse Events
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          // Touch Events
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
           style={{
             cursor: getCursorStyle(),
-            touchAction: "none",
+            touchAction: "none", // Prevents default touch behaviors like scrolling
           }}
           className="border border-gray-300"
         />

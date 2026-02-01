@@ -28,6 +28,12 @@ export const metadata: Metadata = {
     "digital notebook",
     "canvas drawing app",
   ],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false, // Prevents pinch-to-zoom which can interfere with drawing
+  },
 };
 
 export default function RootLayout({
