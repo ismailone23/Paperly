@@ -27,8 +27,10 @@ const PaperCanvas = forwardRef((props, ref) => {
 
   // For pan and zoom on touch devices
   const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const lastTouchDistanceRef = useRef<number | null>(null);
+  const lastPanPointRef = useRef<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -96,8 +98,9 @@ const PaperCanvas = forwardRef((props, ref) => {
 
     setInitializedSlug(slug);
 
-    // Reset zoom for new note
+    // Reset zoom and pan for new note
     setScale(1);
+    setOffset({ x: 0, y: 0 });
   }, [slug, currentPage]);
 
   // Handle undo/redo
@@ -178,18 +181,6 @@ const PaperCanvas = forwardRef((props, ref) => {
     return "default";
   };
 
-  const getCurrentColor = () => {
-    if (activeTool === "pen") return penColor;
-    if (activeTool === "pencil") return pencilColor;
-    return "#000000";
-  };
-
-  const getCurrentWidth = () => {
-    if (activeTool === "pen") return penWidth;
-    if (activeTool === "pencil") return pencilWidth;
-    return 20;
-  };
-
   // Helper function to get coordinates from pointer event
   const getCoordinates = useCallback(
     (e: PointerEvent | React.PointerEvent<HTMLCanvasElement>): Point | null => {
@@ -197,67 +188,24 @@ const PaperCanvas = forwardRef((props, ref) => {
       if (!canvas) return null;
 
       const rect = canvas.getBoundingClientRect();
-
-      // Get the actual displayed size of the canvas
       const displayWidth = rect.width;
       const displayHeight = rect.height;
 
-      // Calculate position relative to canvas, accounting for CSS scaling
       const x = ((e.clientX - rect.left) / displayWidth) * A4_WIDTH;
       const y = ((e.clientY - rect.top) / displayHeight) * A4_HEIGHT;
 
-      return {
-        x,
-        y,
-        pressure: e.pressure || 0.5,
-      };
+      return { x, y, pressure: e.pressure || 0.5 };
     },
     [A4_WIDTH, A4_HEIGHT],
-  );
-
-  const setupDrawingContext = useCallback(() => {
-    if (!context) return;
-
-    if (activeTool === "eraser") {
-      context.globalCompositeOperation = "destination-out";
-      context.lineWidth = 20;
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.globalAlpha = 1;
-    } else {
-      context.globalCompositeOperation = "source-over";
-      context.strokeStyle = getCurrentColor();
-      context.lineWidth = getCurrentWidth();
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.globalAlpha = activeTool === "pencil" ? 0.6 : 1;
-    }
-  }, [context, activeTool]);
-
-  // Direct drawing - no batching for immediate response
-  const drawLine = useCallback(
-    (from: Point, to: Point) => {
-      if (!context) return;
-      context.beginPath();
-      context.moveTo(from.x, from.y);
-      context.lineTo(to.x, to.y);
-      context.stroke();
-    },
-    [context],
   );
 
   // Pointer Events for drawing
   const startDrawing = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
-      if (!context) return;
-
-      // Only draw with pen/touch, not during multi-touch
-      if (isPanning) return;
+      if (!context || isPanning) return;
 
       e.preventDefault();
       e.stopPropagation();
-
-      // Capture pointer for reliable tracking
       e.currentTarget.setPointerCapture(e.pointerId);
 
       const coords = getCoordinates(e);
@@ -266,14 +214,43 @@ const PaperCanvas = forwardRef((props, ref) => {
       isDrawingRef.current = true;
       currentStrokeRef.current = [coords];
 
-      setupDrawingContext();
+      // Setup context with current tool settings directly
+      if (activeTool === "eraser") {
+        context.globalCompositeOperation = "destination-out";
+        context.strokeStyle = "#000000";
+        context.fillStyle = "#000000";
+        context.lineWidth = 20;
+        context.globalAlpha = 1;
+      } else {
+        context.globalCompositeOperation = "source-over";
+        const color = activeTool === "pen" ? penColor : pencilColor;
+        const width = activeTool === "pen" ? penWidth : pencilWidth;
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.lineWidth = width;
+        context.globalAlpha = activeTool === "pencil" ? 0.6 : 1;
+      }
+      context.lineCap = "round";
+      context.lineJoin = "round";
 
-      // Draw a dot for single tap
+      // Start continuous path and draw initial dot
       context.beginPath();
-      context.arc(coords.x, coords.y, context.lineWidth / 2, 0, Math.PI * 2);
+      context.moveTo(coords.x, coords.y);
+      context.arc(coords.x, coords.y, context.lineWidth / 4, 0, Math.PI * 2);
       context.fill();
+      context.beginPath();
+      context.moveTo(coords.x, coords.y);
     },
-    [context, getCoordinates, setupDrawingContext, isPanning],
+    [
+      context,
+      getCoordinates,
+      isPanning,
+      activeTool,
+      penColor,
+      pencilColor,
+      penWidth,
+      pencilWidth,
+    ],
   );
 
   const draw = useCallback(
@@ -284,15 +261,15 @@ const PaperCanvas = forwardRef((props, ref) => {
       const coords = getCoordinates(e);
       if (!coords) return;
 
-      const lastPoint =
-        currentStrokeRef.current[currentStrokeRef.current.length - 1];
-      if (lastPoint) {
-        drawLine(lastPoint, coords);
-      }
+      // Continue path smoothly
+      context.lineTo(coords.x, coords.y);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(coords.x, coords.y);
 
       currentStrokeRef.current.push(coords);
     },
-    [context, getCoordinates, drawLine, isPanning],
+    [context, getCoordinates, isPanning],
   );
 
   const stopDrawing = useCallback(
@@ -324,10 +301,10 @@ const PaperCanvas = forwardRef((props, ref) => {
     ],
   );
 
-  // Touch Events for multi-touch gestures (pinch-zoom only)
+  // Touch Events for multi-touch gestures (pinch-zoom and pan)
   const handleTouchStart = useCallback(
     (e: React.TouchEvent<HTMLCanvasElement>) => {
-      // Two-finger touch = zoom gesture
+      // Two-finger touch = zoom/pan gesture
       if (e.touches.length === 2) {
         e.preventDefault();
         setIsPanning(true);
@@ -340,6 +317,11 @@ const PaperCanvas = forwardRef((props, ref) => {
           touch2.clientY - touch1.clientY,
         );
         lastTouchDistanceRef.current = distance;
+
+        // Calculate midpoint for panning
+        const midX = (touch1.clientX + touch2.clientX) / 2;
+        const midY = (touch1.clientY + touch2.clientY) / 2;
+        lastPanPointRef.current = { x: midX, y: midY };
       }
     },
     [],
@@ -347,7 +329,7 @@ const PaperCanvas = forwardRef((props, ref) => {
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent<HTMLCanvasElement>) => {
-      // Handle pinch-to-zoom with two fingers
+      // Handle pinch-to-zoom and pan with two fingers
       if (e.touches.length === 2 && isPanning) {
         e.preventDefault();
 
@@ -358,11 +340,25 @@ const PaperCanvas = forwardRef((props, ref) => {
           touch2.clientY - touch1.clientY,
         );
 
+        // Zoom
         if (lastTouchDistanceRef.current !== null) {
           const scaleChange = distance / lastTouchDistanceRef.current;
           setScale((prev) => Math.min(Math.max(prev * scaleChange, 0.5), 2.5));
         }
         lastTouchDistanceRef.current = distance;
+
+        // Pan
+        const midX = (touch1.clientX + touch2.clientX) / 2;
+        const midY = (touch1.clientY + touch2.clientY) / 2;
+        if (lastPanPointRef.current) {
+          const deltaX = midX - lastPanPointRef.current.x;
+          const deltaY = midY - lastPanPointRef.current.y;
+          setOffset((prev) => ({
+            x: prev.x + deltaX,
+            y: prev.y + deltaY,
+          }));
+        }
+        lastPanPointRef.current = { x: midX, y: midY };
       }
     },
     [isPanning],
@@ -373,14 +369,16 @@ const PaperCanvas = forwardRef((props, ref) => {
       if (e.touches.length < 2) {
         setIsPanning(false);
         lastTouchDistanceRef.current = null;
+        lastPanPointRef.current = null;
       }
     },
     [],
   );
 
-  // Reset zoom
+  // Reset zoom and pan
   const resetView = useCallback(() => {
     setScale(1);
+    setOffset({ x: 0, y: 0 });
   }, []);
 
   // Cleanup animation frame on unmount
@@ -411,7 +409,7 @@ const PaperCanvas = forwardRef((props, ref) => {
       <div
         className="shadow-2xl bg-white rounded-sm"
         style={{
-          transform: `scale(${scale})`,
+          transform: `scale(${scale}) translate(${offset.x / scale}px, ${offset.y / scale}px)`,
           transformOrigin: "top center",
         }}
       >
