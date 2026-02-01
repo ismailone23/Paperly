@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 // @ts-ignore
 import "./globals.css";
 import { NoteContextProvider } from "@/components/hooks/useNote";
+import { ToolsProvider } from "@/components/hooks/useTools";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NoteContextProvider>{children}</NoteContextProvider>
+        <NoteContextProvider>
+          <ToolsProvider>{children}</ToolsProvider>
+        </NoteContextProvider>
       </body>
     </html>
   );

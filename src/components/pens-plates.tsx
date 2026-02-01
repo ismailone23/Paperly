@@ -1,6 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "./ui/button";
-import { Eraser, Pen, Pencil, Redo, Undo, ChevronDown } from "lucide-react";
+import {
+  Eraser,
+  Pen,
+  Pencil,
+  Redo,
+  Undo,
+  ChevronDown,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Slider } from "./ui/slider";
 import {
@@ -8,136 +19,218 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { colors, useTools } from "./hooks/useTools";
 
-export const colors = [
-  "#000000",
-  "#EF4444",
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#8B5CF6",
-  "#EC4899",
-  "#6366F1",
-  "#14B8A6",
-  "#F97316",
-];
+interface PensPlatesProps {
+  onPageChange: (page: number) => void;
+  onClearPage: () => void;
+}
 
-export default function PensPlates() {
-  const [activeTool, setActiveTool] = useState("pen");
-  const [penColor, setPenColor] = useState("#000000");
-  const [pencilColor, setPencilColor] = useState("#6B7280");
-  const [penWidth, setPenWidth] = useState(3);
-  const [pencilWidth, setPencilWidth] = useState(2);
+export default function PensPlates({
+  onPageChange,
+  onClearPage,
+}: PensPlatesProps) {
+  const {
+    activeTool,
+    setActiveTool,
+    penColor,
+    setPenColor,
+    pencilColor,
+    setPencilColor,
+    penWidth,
+    setPenWidth,
+    pencilWidth,
+    setPencilWidth,
+    pageCount,
+    setPageCount,
+    currentPage,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useTools();
 
   return (
-    <div className="flex w-full items-center justify-between p-2 bg-white rounded-lg border">
-      <div className="flex items-center gap-1">
-        <div className="flex items-center">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={"ghost"}
-                size="sm"
-                onClick={() => setActiveTool("pen")}
-                className={`h-9 w-9 rounded-r-none border-r-0`}
-                style={{
-                  background: activeTool === "pen" ? penColor : "white",
-                }}
-              >
-                <Pen
-                  className="w-4 h-4"
-                  style={{ color: activeTool === "pen" ? "white" : "black" }}
-                />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Pen</p>
-            </TooltipContent>
-          </Tooltip>
-          <ToolDropdown
-            tool="pen"
-            color={activeTool === "pen" ? penColor : "black"}
-            width={penWidth}
-            onColorChange={setPenColor}
-            onWidthChange={setPenWidth}
-          />
-        </div>
-
-        <div className="flex items-center ml-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={"ghost"}
-                size="sm"
-                onClick={() => setActiveTool("pencil")}
-                className="h-9 w-9 rounded-r-none border-r-0"
-                style={{
-                  background: activeTool === "pencil" ? pencilColor : "white",
-                }}
-              >
-                <Pencil
-                  className="w-4 h-4"
+    <div className="flex flex-col w-full sticky top-0 z-10">
+      {/* Main Toolbar */}
+      <div className="flex w-full items-center justify-between p-2 backdrop-blur-lg bg-white/60 rounded-lg border border-white/20">
+        <div className="flex items-center gap-1">
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={"ghost"}
+                  size="sm"
+                  onClick={() => setActiveTool("pen")}
+                  className={`h-9 w-9 rounded-r-none border-r-0`}
                   style={{
-                    color: activeTool === "pencil" ? "white" : "black",
+                    background: activeTool === "pen" ? penColor : "white",
                   }}
-                />
+                >
+                  <Pen
+                    className="w-4 h-4"
+                    style={{ color: activeTool === "pen" ? "white" : "black" }}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Pen</p>
+              </TooltipContent>
+            </Tooltip>
+            <ToolDropdown
+              tool="pen"
+              color={penColor}
+              width={penWidth}
+              onColorChange={setPenColor}
+              onWidthChange={setPenWidth}
+            />
+          </div>
+
+          <div className="flex items-center ml-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={"ghost"}
+                  size="sm"
+                  onClick={() => setActiveTool("pencil")}
+                  className="h-9 w-9 rounded-r-none border-r-0"
+                  style={{
+                    background: activeTool === "pencil" ? pencilColor : "white",
+                  }}
+                >
+                  <Pencil
+                    className="w-4 h-4"
+                    style={{
+                      color: activeTool === "pencil" ? "white" : "black",
+                    }}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Pencil</p>
+              </TooltipContent>
+            </Tooltip>
+            <ToolDropdown
+              tool="pencil"
+              color={pencilColor}
+              width={pencilWidth}
+              onColorChange={setPencilColor}
+              onWidthChange={setPencilWidth}
+            />
+          </div>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={activeTool === "eraser" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTool("eraser")}
+                className="h-9 w-9 ml-1"
+              >
+                <Eraser className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Pencil</p>
+              <p>Eraser</p>
             </TooltipContent>
           </Tooltip>
-          <ToolDropdown
-            tool="pencil"
-            color={activeTool === "pencil" ? pencilColor : "black"}
-            width={pencilWidth}
-            onColorChange={setPencilColor}
-            onWidthChange={setPencilWidth}
-          />
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={activeTool === "eraser" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTool("eraser")}
-              className="h-9 w-9 ml-1"
-            >
-              <Eraser className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Eraser</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="h-8 px-3"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Previous
+          </Button>
 
-      <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-9 w-9">
-              <Undo className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Undo</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-9 w-9">
-              <Redo className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Redo</p>
-          </TooltipContent>
-        </Tooltip>
+          <span className="text-sm font-medium px-3 py-1 bg-white rounded border">
+            Page {currentPage} of {pageCount}
+          </span>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8"
+                onClick={() => setPageCount(pageCount + 1)}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add New Page</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === pageCount}
+            className="h-8 px-3"
+          >
+            Next
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+
+          <div className="border-l border-gray-300 h-6" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearPage}
+            className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Clear
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9"
+                onClick={undo}
+                disabled={!canUndo()}
+              >
+                <Undo className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Undo</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9"
+                onClick={redo}
+                disabled={!canRedo()}
+              >
+                <Redo className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Redo</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );
 }
+
 const ToolDropdown = ({
   tool,
   color,
@@ -148,8 +241,8 @@ const ToolDropdown = ({
   tool: string;
   color: string;
   width: number;
-  onColorChange: React.Dispatch<React.SetStateAction<string>>;
-  onWidthChange: React.Dispatch<React.SetStateAction<number>>;
+  onColorChange: (color: string) => void;
+  onWidthChange: (width: number) => void;
 }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>

@@ -34,7 +34,7 @@ export default function Page() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredPapers = state.filter((note) =>
+  const filteredPapers = state.notes.filter((note) =>
     note.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
@@ -43,7 +43,6 @@ export default function Page() {
       <nav className="sticky top-0 z-50 bg-white border-b border-stone-200">
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-stone-900 rounded flex items-center justify-center">
                 <div className="w-4 h-4 border-4 border-stone-50 rounded" />
@@ -74,7 +73,7 @@ export default function Page() {
             </div>
 
             <div className="flex items-center gap-2">
-              {state.length > 0 && (
+              {state.notes.length > 0 && (
                 <div className="hidden sm:flex items-center gap-2">
                   <Button
                     onClick={() => setViewMode("grid")}
@@ -123,12 +122,12 @@ export default function Page() {
       </div>
 
       <main className="container mx-auto px-6 py-8">
-        {state.length > 0 ? (
+        {state.notes.length > 0 ? (
           <LandingView
             state={filteredPapers}
             viewMode={viewMode}
             searchQuery={searchQuery}
-            totalCount={state.length}
+            totalCount={state.notes.length}
           />
         ) : (
           <EmptyFiles />
@@ -137,7 +136,9 @@ export default function Page() {
     </div>
   );
 }
-
+function Delete({ slug }: { slug: string }) {
+  return <Button></Button>;
+}
 export function LandingView({
   state,
   viewMode,
@@ -296,7 +297,7 @@ export function NewPaper({ children }: { children: ReactNode }) {
       name: string;
       slug: string;
     };
-    if (state.find((pN) => pN.slug === slug)) {
+    if (state.notes.find((pN) => pN.slug === slug)) {
       setError("The slug is already in use!");
       return;
     }
@@ -333,7 +334,7 @@ export function NewPaper({ children }: { children: ReactNode }) {
               <Input
                 id="name"
                 name="name"
-                defaultValue={`Untitled ${state.length + 1}`}
+                defaultValue={`Untitled ${state.notes.length + 1}`}
                 autoFocus
                 className="border-stone-300 focus:border-stone-900 focus:ring-stone-900"
               />
