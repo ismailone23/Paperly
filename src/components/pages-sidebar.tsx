@@ -53,6 +53,11 @@ export default function PagesSidebar({
   const THUMBNAIL_WIDTH = 140;
   const THUMBNAIL_HEIGHT = Math.round((A4_HEIGHT / A4_WIDTH) * THUMBNAIL_WIDTH);
 
+  const pixelRatio =
+    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const CANVAS_WIDTH = A4_WIDTH * pixelRatio;
+  const CANVAS_HEIGHT = A4_HEIGHT * pixelRatio;
+
   useEffect(() => {
     const currentPageElement = pageRefs.current.get(currentPage);
     if (currentPageElement && scrollAreaRef.current) {
@@ -69,11 +74,12 @@ export default function PagesSidebar({
 
       if (!pageData) {
         const canvas = document.createElement("canvas");
-        canvas.width = THUMBNAIL_WIDTH;
-        canvas.height = THUMBNAIL_HEIGHT;
+        canvas.width = THUMBNAIL_WIDTH * pixelRatio;
+        canvas.height = THUMBNAIL_HEIGHT * pixelRatio;
         const ctx = canvas.getContext("2d");
 
         if (ctx) {
+          ctx.scale(pixelRatio, pixelRatio);
           ctx.fillStyle = "white";
           ctx.fillRect(0, 0, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
           ctx.strokeStyle = "#e5e7eb";
@@ -84,14 +90,16 @@ export default function PagesSidebar({
       }
 
       const canvas = document.createElement("canvas");
-      canvas.width = THUMBNAIL_WIDTH;
-      canvas.height = THUMBNAIL_HEIGHT;
+      canvas.width = THUMBNAIL_WIDTH * pixelRatio;
+      canvas.height = THUMBNAIL_HEIGHT * pixelRatio;
       const ctx = canvas.getContext("2d");
 
       if (ctx) {
+        ctx.scale(pixelRatio, pixelRatio);
+
         const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = A4_WIDTH;
-        tempCanvas.height = A4_HEIGHT;
+        tempCanvas.width = CANVAS_WIDTH;
+        tempCanvas.height = CANVAS_HEIGHT;
         const tempCtx = tempCanvas.getContext("2d");
 
         if (tempCtx) {
@@ -100,8 +108,8 @@ export default function PagesSidebar({
             tempCanvas,
             0,
             0,
-            A4_WIDTH,
-            A4_HEIGHT,
+            CANVAS_WIDTH,
+            CANVAS_HEIGHT,
             0,
             0,
             THUMBNAIL_WIDTH,
@@ -112,9 +120,15 @@ export default function PagesSidebar({
 
       return canvas.toDataURL();
     },
-    [getPageData, A4_WIDTH, A4_HEIGHT, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT],
+    [
+      getPageData,
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+      THUMBNAIL_WIDTH,
+      THUMBNAIL_HEIGHT,
+      pixelRatio,
+    ],
   );
-
   useEffect(() => {
     const thumbnail = generateThumbnail(currentPage);
     setThumbnails((prev) => new Map(prev.set(currentPage, thumbnail)));

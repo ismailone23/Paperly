@@ -10,6 +10,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -27,7 +38,21 @@ import { FormEvent, ReactNode, useState } from "react";
 import { useNote, NoteAction, Note } from "@/components/hooks/useNote";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Search, Grid3x3, List, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Grid3x3,
+  List,
+  X,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Page() {
   const { state } = useNote();
@@ -110,12 +135,12 @@ export default function Page() {
               className="pl-10 pr-10 border-stone-300"
             />
             {searchQuery && (
-              <Button
+              <button
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
               >
                 <X className="w-4 h-4" />
-              </Button>
+              </button>
             )}
           </div>
         </div>
@@ -136,9 +161,50 @@ export default function Page() {
     </div>
   );
 }
-function Delete({ slug }: { slug: string }) {
-  return <Button></Button>;
+
+function DeleteNote({ note }: { note: Note }) {
+  const { dispatch } = useNote();
+
+  const handleDelete = () => {
+    dispatch({
+      type: NoteAction.DELETE,
+      payload: note,
+    });
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <DropdownMenuItem
+          onSelect={(e) => e.preventDefault()}
+          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Paper?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete &quot;{note.name}&quot;? This action
+            cannot be undone and all pages will be permanently deleted.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-red-500 hover:bg-red-600"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
+
 export function LandingView({
   state,
   viewMode,
@@ -201,50 +267,90 @@ export function LandingView({
           )}
 
           {state.map((note, i) => (
-            <Link
+            <div
               key={i}
-              href={`/note/${note.slug}`}
-              className={`group bg-white border border-stone-200 hover:border-stone-500 rounded transition-all ${
+              className={`group bg-white border border-stone-200 hover:border-stone-500 rounded transition-all relative ${
                 viewMode === "list" ? "flex items-center" : ""
               }`}
             >
-              {viewMode === "grid" ? (
-                <>
-                  <div className="aspect-video bg-stone-100 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(0,0,0,.02)_25%,rgba(0,0,0,.02)_50%,transparent_50%,transparent_75%,rgba(0,0,0,.02)_75%,rgba(0,0,0,.02))] bg-size-[20px_20px]" />
-                    <div className="absolute top-2 right-2 bg-white px-2 py-1 text-[10px]  text-stone-600 border border-stone-200">
+              <Link
+                href={`/note/${note.slug}`}
+                className={`flex-1 ${viewMode === "list" ? "flex items-center" : ""}`}
+              >
+                {viewMode === "grid" ? (
+                  <>
+                    <div className="aspect-video bg-stone-100 relative overflow-hidden">
+                      {note.thumbnail ? (
+                        <img
+                          src={note.thumbnail}
+                          alt={note.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(0,0,0,.02)_25%,rgba(0,0,0,.02)_50%,transparent_50%,transparent_75%,rgba(0,0,0,.02)_75%,rgba(0,0,0,.02))] bg-size-[20px_20px]" />
+                      )}
+                      <div className="absolute top-2 right-2 bg-white px-2 py-1 text-[10px] text-stone-600 border border-stone-200">
+                        {new Date(note.timestamp).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-stone-900 line-clamp-2">
+                        {note.name}
+                      </h3>
+                      <p className="text-xs text-stone-500 mt-2">{note.slug}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-24 h-24 shrink-0 bg-stone-100 relative overflow-hidden">
+                      {note.thumbnail ? (
+                        <img
+                          src={note.thumbnail}
+                          alt={note.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(0,0,0,.02)_25%,rgba(0,0,0,.02)_50%,transparent_50%,transparent_75%,rgba(0,0,0,.02)_75%,rgba(0,0,0,.02))] bg-size-[20px_20px]" />
+                      )}
+                    </div>
+                    <div className="flex-1 p-4">
+                      <h3 className="font-medium text-stone-900">
+                        {note.name}
+                      </h3>
+                      <p className="text-xs text-stone-500 mt-1">{note.slug}</p>
+                    </div>
+                    <div className="p-4 text-xs text-stone-500">
                       {new Date(note.timestamp).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
+                        year: "numeric",
                       })}
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium text-stone-900 line-clamp-2">
-                      {note.name}
-                    </h3>
-                    <p className="text-xs text-stone-500 mt-2 ">{note.slug}</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-24 h-24 shrink-0 bg-stone-100 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(0,0,0,.02)_25%,rgba(0,0,0,.02)_50%,transparent_50%,transparent_75%,rgba(0,0,0,.02)_75%,rgba(0,0,0,.02))] bg-size-[20px_20px]" />
-                  </div>
-                  <div className="flex-1 p-4">
-                    <h3 className="font-medium text-stone-900">{note.name}</h3>
-                    <p className="text-xs text-stone-500 mt-1 ">{note.slug}</p>
-                  </div>
-                  <div className="p-4 text-xs text-stone-500 ">
-                    {new Date(note.timestamp).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                </>
-              )}
-            </Link>
+                  </>
+                )}
+              </Link>
+
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 bg-white/90 hover:bg-white border border-stone-200"
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DeleteNote note={note} />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -307,8 +413,8 @@ export function NewPaper({ children }: { children: ReactNode }) {
         type: NoteAction.ADD,
       });
       router.push(`/note/${slug}`);
-    } catch (error: any) {
-      setError(error);
+    } catch (error: unknown) {
+      setError(error as string);
     }
   };
 

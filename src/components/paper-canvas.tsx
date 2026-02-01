@@ -31,8 +31,17 @@ const PaperCanvas = forwardRef((props, ref) => {
     slug,
   } = useTools();
 
+  // Physical display size (CSS pixels)
   const A4_WIDTH = 794;
   const A4_HEIGHT = 1123;
+
+  // Get device pixel ratio (2 for Retina, 3 for some tablets)
+  const pixelRatio =
+    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+
+  // Actual canvas size (multiply by pixel ratio for sharp rendering)
+  const CANVAS_WIDTH = A4_WIDTH * pixelRatio;
+  const CANVAS_HEIGHT = A4_HEIGHT * pixelRatio;
 
   // Initialize canvas when slug changes
   useEffect(() => {
@@ -44,8 +53,12 @@ const PaperCanvas = forwardRef((props, ref) => {
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    canvas.width = A4_WIDTH;
-    canvas.height = A4_HEIGHT;
+    // Set actual canvas size (high resolution)
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+
+    // Scale context to match pixel ratio
+    ctx.scale(pixelRatio, pixelRatio);
 
     // Clear canvas
     ctx.fillStyle = "white";
@@ -58,7 +71,7 @@ const PaperCanvas = forwardRef((props, ref) => {
     if (existingData) {
       ctx.putImageData(existingData, 0, 0);
     } else {
-      const imageData = ctx.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+      const imageData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       savePageData(currentPage, imageData);
       addToHistory(imageData);
     }
@@ -79,7 +92,7 @@ const PaperCanvas = forwardRef((props, ref) => {
 
   const saveCurrentPageData = () => {
     if (!context) return;
-    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     savePageData(currentPage, imageData);
   };
 
@@ -92,11 +105,11 @@ const PaperCanvas = forwardRef((props, ref) => {
     } else {
       context.fillStyle = "white";
       context.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
-      const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+      const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       savePageData(pageNumber, imageData);
     }
 
-    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     addToHistory(imageData);
   };
 
@@ -113,7 +126,7 @@ const PaperCanvas = forwardRef((props, ref) => {
     context.fillStyle = "white";
     context.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
 
-    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     savePageData(currentPage, imageData);
     addToHistory(imageData);
   };
@@ -236,14 +249,13 @@ const PaperCanvas = forwardRef((props, ref) => {
     context.closePath();
     context.globalAlpha = 1;
 
-    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     savePageData(currentPage, imageData);
     addToHistory(imageData);
   };
 
   // Touch Events
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Prevent scrolling while drawing
     e.preventDefault();
 
     if (!context) return;
@@ -265,15 +277,6 @@ const PaperCanvas = forwardRef((props, ref) => {
     const coords = getCoordinates(e);
     if (!coords) return;
 
-    // Apple Pencil pressure sensitivity (if available)
-    const touch = e.touches[0];
-    const pressure = (touch as any).force || 1; // force is available on devices with 3D Touch/Apple Pencil
-
-    // Adjust line width based on pressure
-    if (activeTool !== "eraser") {
-      context.lineWidth = getCurrentWidth() * (0.5 + pressure * 0.5);
-    }
-
     context.lineTo(coords.x, coords.y);
     context.stroke();
   };
@@ -287,7 +290,7 @@ const PaperCanvas = forwardRef((props, ref) => {
     context.closePath();
     context.globalAlpha = 1;
 
-    const imageData = context.getImageData(0, 0, A4_WIDTH, A4_HEIGHT);
+    const imageData = context.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     savePageData(currentPage, imageData);
     addToHistory(imageData);
   };
@@ -297,6 +300,14 @@ const PaperCanvas = forwardRef((props, ref) => {
       <div className="shadow-2xl bg-white rounded-sm">
         <canvas
           ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          style={{
+            width: `${A4_WIDTH}px`,
+            height: `${A4_HEIGHT}px`,
+            cursor: getCursorStyle(),
+            touchAction: "none",
+          }}
           // Mouse Events
           onMouseDown={startDrawing}
           onMouseMove={draw}
@@ -307,10 +318,6 @@ const PaperCanvas = forwardRef((props, ref) => {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchEnd}
-          style={{
-            cursor: getCursorStyle(),
-            touchAction: "none", // Prevents default touch behaviors like scrolling
-          }}
           className="border border-gray-300"
         />
       </div>
